@@ -1,0 +1,130 @@
+name: Platform Compliance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Type checking
+      - name: Typecheck
+        run: pnpm build
+
+      # Check CLAUDE.md exists
+      - name: CLAUDE.md exists
+        run: test -f CLAUDE.md || (echo "ERROR: CLAUDE.md is required" && exit 1)
+
+      # Check MIT license
+      - name: MIT License
+        run: |
+          if [ -f LICENSE ]; then
+            grep -qi "MIT" LICENSE || (echo "ERROR: LICENSE must be MIT" && exit 1)
+          else
+            # Check package.json for license field
+            node -e "const p=require('./package.json'); if(p.license!=='MIT'){process.exit(1)}" || \
+              (echo "ERROR: MIT license required (add LICENSE file or license field in package.json)" && exit 1)
+          fi
+
+      # Check no tracking/analytics
+      - name: No tracking
+        run: |
+          # Check for common analytics packages
+          FORBIDDEN="google-analytics|gtag|amplitude|mixpanel|segment|hotjar|plausible|posthog|sentry"
+          if grep -rE "$FORBIDDEN" web/src/ 2>/dev/null; then
+            echo "ERROR: Analytics/tracking code detected. FreeAppStore apps must have zero tracking."
+            exit 1
+          fi
+          # Check for tracking in package.json deps
+          if grep -E "$FORBIDDEN" web/package.json 2>/dev/null; then
+            echo "ERROR: Analytics/tracking dependency detected."
+            exit 1
+          fi
+
+      # Check brand fonts
+      - name: Brand fonts (Manrope + Fraunces)
+        run: |
+          CSS_FILE=$(find web/src -name "index.css" -o -name "global.css" -o -name "app.css" | head -1)
+          if [ -z "$CSS_FILE" ]; then
+            echo "WARNING: No global CSS file found"
+            exit 0
+          fi
+          grep -qi "manrope" "$CSS_FILE" || (echo "ERROR: Manrope font required in $CSS_FILE" && exit 1)
+          grep -qi "fraunces" "$CSS_FILE" || (echo "ERROR: Fraunces font required in $CSS_FILE" && exit 1)
+
+      # Check CSS variables
+      - name: Brand CSS variables
+        run: |
+          CSS_FILE=$(find web/src -name "index.css" -o -name "global.css" -o -name "app.css" | head -1)
+          if [ -z "$CSS_FILE" ]; then exit 0; fi
+          grep -q "\-\-paper" "$CSS_FILE" || (echo "ERROR: --paper CSS variable required" && exit 1)
+          grep -q "\-\-ink" "$CSS_FILE" || (echo "ERROR: --ink CSS variable required" && exit 1)
+          grep -q "\-\-accent" "$CSS_FILE" || (echo "ERROR: --accent CSS variable required" && exit 1)
+
+      # Check PWA manifest
+      - name: PWA manifest
+        run: |
+          MANIFEST=$(find web/public web/src -name "manifest.json" 2>/dev/null | head -1)
+          if [ -z "$MANIFEST" ]; then
+            echo "ERROR: manifest.json required for PWA support"
+            exit 1
+          fi
+
+      # Check FreeAppStore link
+      - name: FreeAppStore link
+        run: |
+          if ! grep -r "freeappstore.online" web/src/ 2>/dev/null | grep -q .; then
+            echo "ERROR: Must include 'Part of FreeAppStore' link somewhere in the app"
+            exit 1
+          fi
+
+      # Bundle size check
+      - name: Bundle size
+        run: |
+          # Find the main JS bundle
+          BUNDLE=$(find web/dist -name "*.js" -path "*/assets/*" | sort -rn | head -1)
+          if [ -z "$BUNDLE" ]; then
+            echo "WARNING: No bundle found to check size"
+            exit 0
+          fi
+          SIZE=$(wc -c < "$BUNDLE")
+          GZIP_SIZE=$(gzip -c "$BUNDLE" | wc -c)
+          echo "Bundle: $BUNDLE"
+          echo "Raw size: $((SIZE / 1024))KB"
+          echo "Gzipped: $((GZIP_SIZE / 1024))KB"
+          # Warn if over 150KB gzipped (hard fail at 300KB)
+          if [ "$GZIP_SIZE" -gt 307200 ]; then
+            echo "ERROR: Bundle too large (${GZIP_SIZE} bytes gzipped, max 300KB)"
+            exit 1
+          fi
+          if [ "$GZIP_SIZE" -gt 153600 ]; then
+            echo "WARNING: Bundle is large (${GZIP_SIZE} bytes gzipped, target < 150KB)"
+          fi
+
+      # Dark mode check
+      - name: Dark mode support
+        run: |
+          if ! grep -r "prefers-color-scheme\|data-theme" web/src/ 2>/dev/null | grep -q .; then
+            echo "ERROR: Dark mode support required (prefers-color-scheme or data-theme)"
+            exit 1
+          fi
+
+      # Package manager check
+      - name: pnpm workspace
+        run: |
+          grep -q "pnpm" package.json || (echo "ERROR: packageManager must be pnpm" && exit 1)
+          test -f pnpm-workspace.yaml || (echo "ERROR: pnpm-workspace.yaml required" && exit 1)
