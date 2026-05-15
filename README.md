@@ -1,6 +1,6 @@
 # template-standalone
 
-The standalone-app template used by [`fas init`](https://github.com/freeappstore-online/sdk/tree/main/packages/cli) to scaffold new free apps for [FreeAppStore](https://freeappstore.online).
+The standalone-app template used by [`fas init`](https://github.com/freeappstore-online/platform/tree/main/packages/cli) to scaffold new free apps for [FreeAppStore](https://freeappstore.online).
 
 You almost certainly want to use the CLI, not clone this directly:
 
