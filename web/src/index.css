@@ -45,6 +45,18 @@
   --content-scale: 1;
   --shadow-soft: 0 28px 70px rgba(24, 44, 104, 0.12);
   --shadow-card: 0 12px 28px rgba(26, 41, 81, 0.08);
+
+  /* Standard SDK tokens (aliases to template vars) */
+  --bg: var(--paper);
+  --surface: var(--paper);
+  --surface-2: var(--paper-deep);
+  --ink-strong: var(--ink);
+  --border: var(--line);
+  --border-strong: var(--line-strong);
+  --accent-hover: var(--accent-deep);
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --shadow: var(--shadow-card);
 }
 
 :root[data-theme='dark'] {
