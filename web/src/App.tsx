@@ -463,7 +463,7 @@ export default function App() {
           )}
         </div>
 
-        {/* ── Affiliate disclaimer ── */}
+        {/* ── Free disclaimer ── */}
         <p style={{
           textAlign: 'center',
           fontSize: '0.75rem',
@@ -472,7 +472,7 @@ export default function App() {
           padding: '0.5rem 0',
           borderTop: '1px solid var(--color-line)',
         }}>
-          We earn a small commission when you book through our links
+          100% free. No commissions, no hidden fees. Links go directly to airlines and hotels.
         </p>
 
         {/* ── Footer ── */}
