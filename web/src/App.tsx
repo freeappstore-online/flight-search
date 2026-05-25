@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { initApp } from '@freeappstore/sdk'
 import { useAuth } from '@freeappstore/sdk/hooks'
 import { FasShell, Tabs, Card, Spinner, BuildInfo } from '@freeappstore/sdk/ui'
@@ -44,135 +44,100 @@ interface SavedSearch {
   savedAt: number
 }
 
-/* ── Mock data generators ── */
-const AIRLINES = [
-  { name: 'Delta Air Lines', code: 'DL', url: 'https://www.delta.com' },
-  { name: 'United Airlines', code: 'UA', url: 'https://www.united.com' },
-  { name: 'American Airlines', code: 'AA', url: 'https://www.aa.com' },
-  { name: 'Southwest Airlines', code: 'WN', url: 'https://www.southwest.com' },
-  { name: 'JetBlue', code: 'B6', url: 'https://www.jetblue.com' },
-  { name: 'Alaska Airlines', code: 'AS', url: 'https://www.alaskaair.com' },
-]
-
-const HOTEL_SOURCES = [
-  { name: 'Booking.com', url: 'https://www.booking.com' },
-  { name: 'Hotels.com', url: 'https://www.hotels.com' },
-  { name: 'Expedia', url: 'https://www.expedia.com' },
-  { name: 'Agoda', url: 'https://www.agoda.com' },
-]
-
-const HOTEL_NAMES = [
-  'Grand Plaza Hotel', 'The Marriott Downtown', 'Hilton Garden Inn',
-  'Holiday Inn Express', 'Hyatt Regency', 'Best Western Plus',
-  'Radisson Blu', 'Four Points by Sheraton', 'Courtyard by Marriott',
-  'Hampton Inn & Suites',
-]
-
-const AMENITIES = ['WiFi', 'Pool', 'Gym', 'Spa', 'Restaurant', 'Parking', 'Bar', 'Room Service']
+/* ── Constants ── */
 
 function randomId() {
   return Math.random().toString(36).slice(2, 10)
 }
 
-function generateMockFlights(origin: string, destination: string, date: string): FlightResult[] {
-  const count = 4 + Math.floor(Math.random() * 4)
-  const results: FlightResult[] = []
-  for (let i = 0; i < count; i++) {
-    const airline = AIRLINES[Math.floor(Math.random() * AIRLINES.length)]
-    const departHour = 6 + Math.floor(Math.random() * 14)
-    const durationHours = 2 + Math.floor(Math.random() * 6)
-    const durationMins = Math.floor(Math.random() * 50)
-    const arriveHour = (departHour + durationHours) % 24
-    const stops = Math.random() > 0.6 ? 1 : Math.random() > 0.8 ? 2 : 0
-    const basePrice = 150 + Math.floor(Math.random() * 500)
-    results.push({
-      id: randomId(),
-      airline: airline.name,
-      flightNo: `${airline.code}${100 + Math.floor(Math.random() * 900)}`,
-      origin: origin.toUpperCase().slice(0, 3),
-      destination: destination.toUpperCase().slice(0, 3),
-      departTime: `${date}T${String(departHour).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
-      arriveTime: `${date}T${String(arriveHour).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
-      duration: `${durationHours}h ${durationMins}m`,
-      stops,
-      price: basePrice,
-      currency: 'USD',
-      bookUrl: `${airline.url}/booking?from=${origin}&to=${destination}&date=${date}`,
-      source: airline.name,
-    })
-  }
-  return results.sort((a, b) => a.price - b.price)
-}
 
-function generateMockHotels(city: string, checkIn: string, checkOut: string): HotelResult[] {
-  const count = 5 + Math.floor(Math.random() * 4)
-  const results: HotelResult[] = []
-  for (let i = 0; i < count; i++) {
-    const source = HOTEL_SOURCES[Math.floor(Math.random() * HOTEL_SOURCES.length)]
-    const stars = 2 + Math.floor(Math.random() * 4)
-    const rating = 6.5 + Math.random() * 3.4
-    const pricePerNight = 60 + Math.floor(Math.random() * 300) + stars * 30
-    const amenityCount = 2 + Math.floor(Math.random() * 4)
-    const shuffled = [...AMENITIES].sort(() => Math.random() - 0.5)
-    results.push({
-      id: randomId(),
-      name: HOTEL_NAMES[Math.floor(Math.random() * HOTEL_NAMES.length)],
-      location: city,
-      rating: Math.round(rating * 10) / 10,
-      stars,
-      pricePerNight,
-      currency: 'USD',
-      imageUrl: '',
-      bookUrl: `${source.url}/hotel?city=${encodeURIComponent(city)}&checkin=${checkIn}&checkout=${checkOut}`,
-      source: source.name,
-      amenities: shuffled.slice(0, amenityCount),
-    })
-  }
-  return results.sort((a, b) => a.pricePerNight - b.pricePerNight)
-}
-
-/* ── Search functions (structured for real API integration) ── */
+/* ── Search functions using Travelpayouts API via proxy ── */
 
 async function searchFlights(
-  _proxy: typeof fas.proxy,
+  proxy: typeof fas.proxy,
   origin: string,
   destination: string,
   departDate: string,
   _returnDate: string,
   _travelers: number,
 ): Promise<FlightResult[]> {
-  // When proxy is configured with real API keys (e.g. Amadeus, Skyscanner),
-  // replace mock with:
-  //
-  // const res = await proxy.fetch(
-  //   `partners.api.skyscanner.net/apiservices/v3/flights/live/search/create`,
-  //   { method: 'POST', body: JSON.stringify({ query: { ... } }) }
-  // )
-  // const data = await res.json()
-  // return transformSkyscannerResults(data)
+  // Travelpayouts cheapest tickets API (token injected by proxy)
+  const month = departDate.slice(0, 7) // YYYY-MM
+  const res = await proxy.fetch(
+    `api.travelpayouts.com/aviasales/v3/prices_for_dates?origin=${origin}&destination=${destination}&departure_at=${month}&sorting=price&limit=8&currency=usd`
+  )
+  if (!res.ok) throw new Error(`Travelpayouts flights: ${res.status}`)
+  const json = await res.json() as {
+    success: boolean
+    data: Array<{
+      origin: string
+      destination: string
+      origin_airport: string
+      destination_airport: string
+      price: number
+      airline: string
+      flight_number: string
+      departure_at: string
+      return_at: string
+      transfers: number
+      duration_to: number
+      link: string
+    }>
+  }
+  if (!json.success || !json.data?.length) return []
 
-  // Simulate network delay
-  await new Promise(r => setTimeout(r, 800 + Math.random() * 400))
-  return generateMockFlights(origin, destination, departDate)
+  return json.data.map(d => ({
+    id: randomId(),
+    airline: d.airline,
+    flightNo: `${d.airline}${d.flight_number}`,
+    origin: d.origin_airport || d.origin,
+    destination: d.destination_airport || d.destination,
+    departTime: d.departure_at,
+    arriveTime: d.departure_at, // API doesn't give arrival time
+    duration: `${Math.floor(d.duration_to / 60)}h ${d.duration_to % 60}m`,
+    stops: d.transfers,
+    price: d.price,
+    currency: 'USD',
+    bookUrl: `https://www.aviasales.com${d.link}`,
+    source: 'Aviasales',
+  }))
 }
 
 async function searchHotels(
-  _proxy: typeof fas.proxy,
+  proxy: typeof fas.proxy,
   city: string,
   checkIn: string,
   checkOut: string,
   _guests: number,
 ): Promise<HotelResult[]> {
-  // When proxy is configured with real API keys (e.g. Booking.com Affiliate):
-  //
-  // const res = await proxy.fetch(
-  //   `distribution-xml.booking.com/2.5/json/hotels?city=${encodeURIComponent(city)}&checkin=${checkIn}&checkout=${checkOut}`,
-  // )
-  // const data = await res.json()
-  // return transformBookingResults(data)
+  // Travelpayouts hotel prices API (token injected by proxy)
+  const res = await proxy.fetch(
+    `api.travelpayouts.com/v2/cache.json?location=${encodeURIComponent(city)}&checkIn=${checkIn}&checkOut=${checkOut}&currency=usd&limit=8`
+  )
+  if (!res.ok) throw new Error(`Travelpayouts hotels: ${res.status}`)
+  const json = await res.json() as {
+    [hotelId: string]: {
+      hotelName?: string
+      stars?: number
+      priceFrom?: number
+      locationName?: string
+      hotel_id?: number
+    }
+  }
 
-  await new Promise(r => setTimeout(r, 800 + Math.random() * 400))
-  return generateMockHotels(city, checkIn, checkOut)
+  return Object.entries(json).slice(0, 8).map(([id, h]) => ({
+    id,
+    name: h.hotelName || `Hotel ${id}`,
+    location: h.locationName || city,
+    rating: (h.stars || 3) * 2,
+    stars: h.stars || 3,
+    pricePerNight: h.priceFrom || 0,
+    currency: 'USD',
+    imageUrl: '',
+    bookUrl: `https://search.hotellook.com/hotels?id=${h.hotel_id || id}`,
+    source: 'Hotellook',
+    amenities: [],
+  })).filter(h => h.pricePerNight > 0)
 }
 
 /* ── Helper ── */
@@ -326,8 +291,8 @@ export default function App() {
               <Card>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                    <Input label="From" placeholder="City or airport code" value={flightOrigin} onChange={setFlightOrigin} />
-                    <Input label="To" placeholder="City or airport code" value={flightDest} onChange={setFlightDest} />
+                    <PlaceInput label="From" placeholder="Type a city or airport..." value={flightOrigin} onChange={(code) => setFlightOrigin(code)} />
+                    <PlaceInput label="To" placeholder="Type a city or airport..." value={flightDest} onChange={(code) => setFlightDest(code)} />
                   </div>
                   <Input label="Depart" type="date" value={departDate} onChange={setDepartDate} />
                   <Input label="Return" type="date" value={returnDate} onChange={setReturnDate} />
@@ -373,7 +338,7 @@ export default function App() {
               <Card>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div style={{ gridColumn: '1 / -1' }}>
-                    <Input label="City or destination" placeholder="e.g. New York, Paris" value={hotelCity} onChange={setHotelCity} />
+                    <PlaceInput label="City or destination" placeholder="Type a city..." value={hotelCity} onChange={(code) => setHotelCity(code)} />
                   </div>
                   <Input label="Check-in" type="date" value={checkIn} onChange={setCheckIn} />
                   <Input label="Check-out" type="date" value={checkOut} onChange={setCheckOut} />
@@ -640,6 +605,112 @@ function Input({ label, placeholder, value, onChange, type = 'text' }: {
           width: '100%',
         }}
       />
+    </div>
+  )
+}
+
+/* ── Airport/City autocomplete input ── */
+type Place = { code: string; name: string; country_name: string; type: string }
+
+function PlaceInput({ label, placeholder, value, onChange }: {
+  label: string
+  placeholder?: string
+  value: string
+  onChange: (code: string, display: string) => void
+}) {
+  const [suggestions, setSuggestions] = useState<Place[]>([])
+  const [open, setOpen] = useState(false)
+  const [display, setDisplay] = useState(value)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const fetchSuggestions = useCallback(async (term: string) => {
+    if (term.length < 2) { setSuggestions([]); return }
+    try {
+      const res = await fetch(
+        `https://autocomplete.travelpayouts.com/places2?term=${encodeURIComponent(term)}&locale=en&types[]=city&types[]=airport`
+      )
+      const data = await res.json() as Place[]
+      setSuggestions(data.slice(0, 6))
+      setOpen(true)
+    } catch {
+      setSuggestions([])
+    }
+  }, [])
+
+  const handleInput = useCallback((val: string) => {
+    setDisplay(val)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => fetchSuggestions(val), 250)
+  }, [fetchSuggestions])
+
+  const selectPlace = useCallback((place: Place) => {
+    const code = place.code
+    const label = `${place.name} (${code})`
+    setDisplay(label)
+    setSuggestions([])
+    setOpen(false)
+    onChange(code, label)
+  }, [onChange])
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', position: 'relative' }}>
+      <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-muted)' }}>{label}</label>
+      <input
+        type="text"
+        placeholder={placeholder}
+        value={display}
+        onChange={e => handleInput(e.target.value)}
+        onFocus={() => { if (suggestions.length > 0) setOpen(true) }}
+        onBlur={() => setTimeout(() => setOpen(false), 200)}
+        style={{
+          padding: '0.5rem 0.75rem',
+          border: '1px solid var(--color-line)',
+          borderRadius: 'var(--radius-btn, 0.5rem)',
+          background: 'var(--color-paper)',
+          color: 'var(--color-ink)',
+          fontSize: '0.875rem',
+          outline: 'none',
+          width: '100%',
+        }}
+      />
+      {open && suggestions.length > 0 && (
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          zIndex: 100,
+          background: 'var(--color-paper)',
+          border: '1px solid var(--color-line)',
+          borderRadius: 'var(--radius-btn, 0.5rem)',
+          marginTop: '0.25rem',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          overflow: 'hidden',
+        }}>
+          {suggestions.map(place => (
+            <button
+              key={place.code + place.type}
+              onMouseDown={() => selectPlace(place)}
+              style={{
+                display: 'block',
+                width: '100%',
+                textAlign: 'left',
+                padding: '0.5rem 0.75rem',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                color: 'var(--color-ink)',
+              }}
+            >
+              <span style={{ fontWeight: 600 }}>{place.name}</span>
+              <span style={{ color: 'var(--color-muted)', marginLeft: '0.5rem' }}>
+                {place.code} · {place.country_name} · {place.type}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
