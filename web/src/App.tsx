@@ -171,6 +171,32 @@ function PlaceInput({ label, placeholder, value, onChange }: {
   )
 }
 
+/* ── Simple input helpers ── */
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '0.5rem 0.75rem', border: '1px solid var(--color-line)',
+  borderRadius: '0.5rem', background: 'var(--color-paper)', color: 'var(--color-ink)',
+  fontSize: '0.875rem', outline: 'none',
+}
+const labelStyle: React.CSSProperties = { fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-muted)' }
+
+function DateInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+      <label style={labelStyle}>{label}</label>
+      <input type="date" value={value} onChange={e => onChange(e.target.value)} style={inputStyle} />
+    </div>
+  )
+}
+
+function NumInput({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+      <label style={labelStyle}>{label}</label>
+      <input type="number" min={1} max={9} value={value} onChange={e => onChange(Number(e.target.value))} style={inputStyle} />
+    </div>
+  )
+}
+
 /* ── Main App ── */
 export default function App() {
   const { user } = useAuth(fas)
@@ -270,29 +296,37 @@ export default function App() {
 
   return (
     <FasShell app={fas} appName="Flight Search">
-      <div className="max-w-2xl mx-auto px-4 pb-8">
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: '0 1rem 2rem' }}>
 
         {/* Hero */}
-        <div className="text-center py-6">
-          <h1 className="display-font text-2xl sm:text-3xl font-bold text-[var(--color-ink)]">
+        <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+          <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '1.75rem', fontWeight: 700, color: 'var(--color-ink)', letterSpacing: '-0.03em' }}>
             Find Cheap Flights & Hotels
           </h1>
-          <p className="mt-2 text-sm text-[var(--color-muted)]">
+          <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--color-muted)' }}>
             Compare real prices. Book directly with airlines and hotels.
           </p>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 border-b border-[var(--color-line)] mb-6">
+        <div style={{ display: 'flex', gap: '0.25rem', borderBottom: '1px solid var(--color-line)', marginBottom: '1.5rem' }}>
           {tabs.map(t => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`px-4 py-2.5 text-sm font-medium transition-colors ${
-                tab === t.key
-                  ? 'border-b-2 border-[var(--color-accent)] text-[var(--color-ink)]'
-                  : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
-              }`}
+              style={{
+                padding: '0.625rem 1rem',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                color: tab === t.key ? 'var(--color-ink)' : 'var(--color-muted)',
+                borderBottom: tab === t.key ? '2px solid var(--color-accent)' : '2px solid transparent',
+                background: 'none',
+                border: 'none',
+                borderBottomWidth: 2,
+                borderBottomStyle: 'solid',
+                borderBottomColor: tab === t.key ? 'var(--color-accent)' : 'transparent',
+                cursor: 'pointer',
+              }}
             >
               {t.label}
             </button>
@@ -301,40 +335,28 @@ export default function App() {
 
         {/* Error banner */}
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          <div style={{ marginBottom: '1rem', borderRadius: '0.5rem', background: '#fef2f2', border: '1px solid #fecaca', padding: '0.75rem', fontSize: '0.875rem', color: '#b91c1c' }}>
             {error}
           </div>
         )}
 
         {/* ── Flights Tab ── */}
         {tab === 'flights' && (
-          <div className="space-y-4">
-            <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-4 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <div style={{ border: '1px solid var(--color-line)', borderRadius: '0.75rem', background: 'var(--color-panel)', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
                 <PlaceInput label="From" placeholder="Type a city or airport..." value={flightOrigin} onChange={setFlightOrigin} />
                 <PlaceInput label="To" placeholder="Type a city or airport..." value={flightDest} onChange={setFlightDest} />
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-[var(--color-muted)]">Depart</label>
-                  <input type="date" value={departDate} onChange={e => setDepartDate(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-[var(--color-line)] rounded-lg bg-[var(--color-paper)] text-sm text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-accent)]" />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-[var(--color-muted)]">Return</label>
-                  <input type="date" value={returnDate} onChange={e => setReturnDate(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-[var(--color-line)] rounded-lg bg-[var(--color-paper)] text-sm text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-accent)]" />
-                </div>
-                <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                  <label className="text-xs font-medium text-[var(--color-muted)]">Travelers</label>
-                  <input type="number" min={1} max={9} value={travelers} onChange={e => setTravelers(Math.max(1, Number(e.target.value)))}
-                    className="w-full px-3 py-2.5 border border-[var(--color-line)] rounded-lg bg-[var(--color-paper)] text-sm text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-accent)]" />
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+                <DateInput label="Depart" value={departDate} onChange={setDepartDate} />
+                <DateInput label="Return" value={returnDate} onChange={setReturnDate} />
+                <NumInput label="Travelers" value={travelers} onChange={v => setTravelers(Math.max(1, v))} />
               </div>
               <button
                 onClick={handleFlightSearch}
                 disabled={searching || !flightOrigin || !flightDest}
-                className="w-full rounded-xl bg-[var(--color-accent)] py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 transition-opacity"
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', background: 'var(--color-accent)', color: '#fff', fontSize: '0.875rem', fontWeight: 600, border: 'none', cursor: 'pointer', opacity: (searching || !flightOrigin || !flightDest) ? 0.4 : 1 }}
               >
                 {searching ? 'Searching...' : 'Search Flights'}
               </button>
