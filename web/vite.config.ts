@@ -34,9 +34,9 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'APPNAME',
-        short_name: 'APPNAME',
-        description: 'Free APPNAME app — part of FreeAppStore',
+        name: 'flight-search',
+        short_name: 'flight-search',
+        description: 'Free flight-search app — part of FreeAppStore',
         start_url: '/',
         display: 'standalone',
         background_color: '#ffffff',
