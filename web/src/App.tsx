@@ -12,11 +12,6 @@ interface FlightResult {
   departTime: string; duration: string; stops: number; price: number; currency: string; bookUrl: string
 }
 
-interface HotelResult {
-  id: string; name: string; location: string; rating: number; stars: number
-  pricePerNight: number; currency: string; bookUrl: string; source: string
-}
-
 interface SavedItem {
   id: string; type: 'flight' | 'hotel' | 'search'
   label: string; price?: number; params: Record<string, string>; savedAt: number
@@ -61,17 +56,6 @@ async function fetchFlights(proxy: typeof fas.proxy, origin: string, dest: strin
     stops: d.transfers, price: d.price, currency: 'USD',
     bookUrl: `https://www.aviasales.com${d.link}`,
   }))
-}
-
-async function fetchHotels(proxy: typeof fas.proxy, city: string, checkIn: string, checkOut: string): Promise<HotelResult[]> {
-  const res = await proxy.fetch(`api.travelpayouts.com/v2/cache.json?location=${encodeURIComponent(city)}&checkIn=${checkIn}&checkOut=${checkOut}&currency=usd&limit=10`)
-  if (!res.ok) throw new Error(`API ${res.status}`)
-  const json = await res.json() as Record<string, { hotelName?: string; stars?: number; priceFrom?: number; locationName?: string; hotel_id?: number }>
-  return Object.entries(json).slice(0, 10).map(([id, h]) => ({
-    id, name: h.hotelName || `Hotel ${id}`, location: h.locationName || city,
-    rating: (h.stars || 3) * 2, stars: h.stars || 3, pricePerNight: h.priceFrom || 0,
-    currency: 'USD', bookUrl: `https://search.hotellook.com/hotels?id=${h.hotel_id || id}`, source: 'Hotellook',
-  })).filter(h => h.pricePerNight > 0)
 }
 
 // ── PlaceInput with autocomplete dropdown ──
@@ -143,15 +127,8 @@ export default function App() {
   const [fTravelers, setFTravelers] = useState(1)
   const [fSort, setFSort] = useState<'price' | 'duration' | 'stops'>('price')
 
-  // Hotel form
-  const [hCity, setHCity] = useState('')
-  const [hIn, setHIn] = useState(today())
-  const [hOut, setHOut] = useState(tomorrow())
-  const [hGuests, setHGuests] = useState(1)
-
   // Results
   const [flights, setFlights] = useState<FlightResult[]>([])
-  const [hotels, setHotels] = useState<HotelResult[]>([])
   const [searching, setSearching] = useState(false)
 
   // Compare
@@ -177,23 +154,16 @@ export default function App() {
     await persist([item, ...saved].slice(0, 30))
   }
 
-  async function saveSearch(type: 'flight' | 'hotel') {
+  async function saveSearch() {
     if (!user) return
-    const item: SavedItem = type === 'flight'
-      ? { id: rid(), type: 'search', label: `${fOrigin} → ${fDest} (${fDepart})`, params: { origin: fOrigin, destination: fDest, depart: fDepart, ret: fReturn, travelers: String(fTravelers) }, savedAt: Date.now() }
-      : { id: rid(), type: 'search', label: `Hotels in ${hCity} (${hIn})`, params: { city: hCity, checkIn: hIn, checkOut: hOut, guests: String(hGuests), searchType: 'hotel' }, savedAt: Date.now() }
+    const item: SavedItem = { id: rid(), type: 'search', label: `${fOrigin} → ${fDest} (${fDepart})`, params: { origin: fOrigin, destination: fDest, depart: fDepart, ret: fReturn, travelers: String(fTravelers) }, savedAt: Date.now() }
     await persist([item, ...saved].slice(0, 30))
   }
 
   function restoreSearch(s: SavedItem) {
-    if (s.params.searchType === 'hotel' || s.params.city) {
-      setHCity(s.params.city ?? ''); setHIn(s.params.checkIn ?? today()); setHOut(s.params.checkOut ?? tomorrow())
-      setHGuests(Number(s.params.guests) || 1); setTab('hotels')
-    } else {
-      setFOrigin(s.params.origin ?? ''); setFDest(s.params.destination ?? '')
-      setFDepart(s.params.depart ?? s.params.date ?? today()); setFReturn(s.params.ret ?? tomorrow())
-      setFTravelers(Number(s.params.travelers) || 1); setTab('flights')
-    }
+    setFOrigin(s.params.origin ?? ''); setFDest(s.params.destination ?? '')
+    setFDepart(s.params.depart ?? s.params.date ?? today()); setFReturn(s.params.ret ?? tomorrow())
+    setFTravelers(Number(s.params.travelers) || 1); setTab('flights')
   }
 
   function toggleCompare(id: string) {
@@ -218,19 +188,8 @@ export default function App() {
     finally { setSearching(false) }
   }
 
-  async function searchHotels() {
-    if (!hCity) return
-    setSearching(true); setHotels([]); setError('')
-    try {
-      const r = await fetchHotels(fas.proxy, hCity, hIn, hOut)
-      setHotels(r); if (!r.length) setError('No hotels found. Try a different city.')
-    } catch (e) { setError(e instanceof Error ? e.message : 'Search failed. Sign in and try again.') }
-    finally { setSearching(false) }
-  }
-
   const tabs = [
     { key: 'flights', label: 'Flights' },
-    { key: 'hotels', label: 'Hotels' },
     ...(compareFlights.length > 0 ? [{ key: 'compare', label: `Compare (${compareFlights.length})` }] : []),
     { key: 'saved', label: `Saved${saved.length ? ` (${saved.length})` : ''}` },
     ...(user ? [{ key: 'profile', label: 'Profile' }] : []),
@@ -243,10 +202,10 @@ export default function App() {
         {/* Hero */}
         <div style={{ textAlign: 'center', padding: '1.5rem 0 0.5rem' }}>
           <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '1.75rem', fontWeight: 700, color: 'var(--color-ink)', letterSpacing: '-0.03em' }}>
-            Find Cheap Flights & Hotels
+            Find Cheap Flights
           </h1>
           <p style={{ marginTop: 6, fontSize: '0.875rem', color: 'var(--color-muted)' }}>
-            Real prices from 400+ airlines. Compare side-by-side, save deals, book direct.
+            Real prices from 400+ airlines. Compare, save, and book direct.
           </p>
         </div>
 
@@ -297,7 +256,7 @@ export default function App() {
                     ))}
                   </div>
                 </div>
-                {user && <button onClick={() => saveSearch('flight')} style={S.link}>Save this search</button>}
+                {user && <button onClick={() => saveSearch()} style={S.link}>Save this search</button>}
 
                 {sortedFlights.map(f => {
                   const selected = compareIds.has(f.id)
@@ -324,52 +283,6 @@ export default function App() {
                     </div>
                   )
                 })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── HOTELS ── */}
-        {tab === 'hotels' && (
-          <div style={S.stack}>
-            <div style={S.card}>
-              <div style={{ ...S.stack, gap: '0.75rem' }}>
-                <PlaceInput label="Destination" placeholder="City..." value={hCity} onChange={setHCity} />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: '0.75rem' }}>
-                  <Field label="Check-in"><input type="date" value={hIn} onChange={e => setHIn(e.target.value)} style={S.input} /></Field>
-                  <Field label="Check-out"><input type="date" value={hOut} onChange={e => setHOut(e.target.value)} style={S.input} /></Field>
-                  <Field label="Guests"><input type="number" min={1} max={9} value={hGuests} onChange={e => setHGuests(Math.max(1, +e.target.value))} style={S.input} /></Field>
-                </div>
-                <button onClick={searchHotels} disabled={searching || !hCity} style={S.btn(!searching && !!hCity)}>
-                  {searching ? 'Searching...' : 'Search Hotels'}
-                </button>
-              </div>
-            </div>
-
-            {searching && <div style={{ textAlign: 'center', padding: '2rem 0' }}><Spinner /><p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', marginTop: 8 }}>Comparing hotel prices...</p></div>}
-
-            {hotels.length > 0 && !searching && (
-              <div style={S.stack}>
-                <div style={S.row}>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>{hotels.length} hotels</p>
-                  {user && <button onClick={() => saveSearch('hotel')} style={S.link}>Save search</button>}
-                </div>
-                {hotels.map(h => (
-                  <div key={h.id} style={S.card}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-                      <div>
-                        <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-ink)' }}>{h.name}</p>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginTop: 2 }}>{h.location}</p>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>{'★'.repeat(h.stars)} · {h.rating}/10</p>
-                      </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <p style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-ink)' }}>${h.pricePerNight}</p>
-                        <p style={{ fontSize: '0.6rem', color: 'var(--color-muted)' }}>per night</p>
-                        <a href={h.bookUrl} target="_blank" rel="noopener noreferrer" style={{ ...S.pill, marginTop: 6, display: 'inline-block' }}>Book</a>
-                      </div>
-                    </div>
-                  </div>
-                ))}
               </div>
             )}
           </div>
@@ -456,7 +369,7 @@ export default function App() {
                   <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>Saved</p>
                 </div>
                 <div style={{ borderRadius: 8, background: 'var(--color-line)', padding: 12, textAlign: 'center' }}>
-                  <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-ink)' }}>{flights.length + hotels.length}</p>
+                  <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-ink)' }}>{flights.length}</p>
                   <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>Results</p>
                 </div>
               </div>
@@ -466,7 +379,7 @@ export default function App() {
 
         {/* Footer */}
         <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--color-muted)', marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--color-line)' }}>
-          Completely free. No tracking, no ads. Links go directly to airlines and hotels.
+          Completely free. No tracking, no ads. Links go directly to airlines.
         </p>
       </div>
     </FasShell>
