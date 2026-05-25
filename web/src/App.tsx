@@ -358,7 +358,7 @@ export default function App() {
         {tab === 'flights' && (
           <div>
             <div style={{ border: '1px solid var(--color-line)', borderRadius: '0.75rem', background: 'var(--color-panel)', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <PlaceInput label="From" placeholder="Type a city or airport..." value={flightOrigin} onChange={setFlightOrigin} />
                 <PlaceInput label="To" placeholder="Type a city or airport..." value={flightDest} onChange={setFlightDest} />
               </div>
@@ -370,7 +370,7 @@ export default function App() {
               <button
                 onClick={handleFlightSearch}
                 disabled={searching || !flightOrigin || !flightDest}
-                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', background: (searching || !flightOrigin || !flightDest) ? 'var(--color-line)' : 'var(--color-accent)', color: (searching || !flightOrigin || !flightDest) ? 'var(--color-muted)' : '#fff', fontSize: '0.875rem', fontWeight: 600, border: 'none', cursor: (searching || !flightOrigin || !flightDest) ? 'default' : 'pointer' }}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', background: 'var(--color-accent)', color: '#fff', opacity: (searching || !flightOrigin || !flightDest) ? 0.5 : 1, fontSize: '0.875rem', fontWeight: 600, border: 'none', cursor: (searching || !flightOrigin || !flightDest) ? 'default' : 'pointer' }}
               >
                 {searching ? 'Searching...' : 'Search Flights'}
               </button>
@@ -457,7 +457,7 @@ export default function App() {
               <button
                 onClick={handleHotelSearch}
                 disabled={searching || !hotelCity}
-                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', background: (searching || !hotelCity) ? 'var(--color-line)' : 'var(--color-accent)', color: (searching || !hotelCity) ? 'var(--color-muted)' : '#fff', fontSize: '0.875rem', fontWeight: 600, border: 'none', cursor: (searching || !hotelCity) ? 'default' : 'pointer' }}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', background: 'var(--color-accent)', color: '#fff', opacity: (searching || !hotelCity) ? 0.5 : 1, fontSize: '0.875rem', fontWeight: 600, border: 'none', cursor: (searching || !hotelCity) ? 'default' : 'pointer' }}
               >
                 {searching ? 'Searching...' : 'Search Hotels'}
               </button>
