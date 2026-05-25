@@ -246,6 +246,20 @@ export default function App() {
     await fas.kv.set('saved-searches', updated)
   }
 
+  async function saveFlightDeal(f: FlightResult) {
+    if (!user) return
+    const entry: SavedSearch = {
+      id: randomId(),
+      type: 'flight',
+      label: `${f.airline} ${f.flightNo}: ${f.origin} → ${f.destination} — $${f.price}`,
+      params: { origin: f.origin, destination: f.destination, departDate: f.departTime.slice(0, 10), returnDate, travelers: String(travelers), price: String(f.price), bookUrl: f.bookUrl },
+      savedAt: Date.now(),
+    }
+    const updated = [entry, ...saved].slice(0, 20)
+    setSaved(updated)
+    await fas.kv.set('saved-searches', updated)
+  }
+
   async function deleteSaved(id: string) {
     const updated = saved.filter(s => s.id !== id)
     setSaved(updated)
@@ -356,7 +370,7 @@ export default function App() {
               <button
                 onClick={handleFlightSearch}
                 disabled={searching || !flightOrigin || !flightDest}
-                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', background: 'var(--color-accent)', color: '#fff', fontSize: '0.875rem', fontWeight: 600, border: 'none', cursor: 'pointer', opacity: (searching || !flightOrigin || !flightDest) ? 0.4 : 1 }}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', background: (searching || !flightOrigin || !flightDest) ? 'var(--color-line)' : 'var(--color-accent)', color: (searching || !flightOrigin || !flightDest) ? 'var(--color-muted)' : '#fff', fontSize: '0.875rem', fontWeight: 600, border: 'none', cursor: (searching || !flightOrigin || !flightDest) ? 'default' : 'pointer' }}
               >
                 {searching ? 'Searching...' : 'Search Flights'}
               </button>
@@ -370,38 +384,45 @@ export default function App() {
             )}
 
             {flightResults.length > 0 && !searching && (
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <p className="text-sm text-[var(--color-muted)]">{flightResults.length} flights found</p>
+              <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-muted)' }}>{flightResults.length} flights found</p>
                   {user && (
-                    <button onClick={() => saveCurrent('flight')} className="text-xs text-[var(--color-accent)] font-medium hover:underline">
+                    <button onClick={() => saveCurrent('flight')} style={{ background: 'none', border: 'none', color: 'var(--color-accent)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500 }}>
                       Save search
                     </button>
                   )}
                 </div>
                 {flightResults.map(f => (
-                  <div key={f.id} className="rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--color-line)] text-xs font-bold text-[var(--color-ink)]">{f.airline}</span>
-                          <span className="text-sm font-semibold text-[var(--color-ink)]">{f.flightNo}</span>
+                  <div key={f.id} style={{ border: '1px solid var(--color-line)', borderRadius: '0.75rem', background: 'var(--color-panel)', padding: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: '0.5rem', background: 'var(--color-line)', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-ink)' }}>{f.airline}</span>
+                          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-ink)' }}>{f.flightNo}</span>
                         </div>
-                        <p className="text-sm text-[var(--color-ink)]">{formatTime(f.departTime)} · {f.origin} → {f.destination}</p>
-                        <p className="text-xs text-[var(--color-muted)]">
+                        <p style={{ fontSize: '0.875rem', color: 'var(--color-ink)', marginTop: '0.375rem' }}>{formatTime(f.departTime)} · {f.origin} → {f.destination}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginTop: '0.125rem' }}>
                           {f.duration} · {f.stops === 0 ? 'Nonstop' : `${f.stops} stop${f.stops > 1 ? 's' : ''}`}
                         </p>
                       </div>
-                      <div className="text-right shrink-0 ml-4 space-y-1">
-                        <p className="text-xl font-bold text-[var(--color-ink)]">${f.price}</p>
-                        <a
-                          href={f.bookUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-block rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90"
-                        >
-                          Book
-                        </a>
+                      <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '1rem' }}>
+                        <p style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-ink)' }}>${f.price}</p>
+                        <div style={{ display: 'flex', gap: '0.375rem', marginTop: '0.375rem', justifyContent: 'flex-end' }}>
+                          {user && (
+                            <button
+                              onClick={() => saveFlightDeal(f)}
+                              style={{ padding: '0.375rem 0.75rem', borderRadius: '0.5rem', border: '1px solid var(--color-line)', background: 'none', fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-muted)', cursor: 'pointer' }}
+                            >
+                              Save
+                            </button>
+                          )}
+                          <a href={f.bookUrl} target="_blank" rel="noopener noreferrer"
+                            style={{ display: 'inline-block', padding: '0.375rem 0.75rem', borderRadius: '0.5rem', background: 'var(--color-accent)', fontSize: '0.75rem', fontWeight: 600, color: '#fff', textDecoration: 'none' }}
+                          >
+                            Book
+                          </a>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -436,7 +457,7 @@ export default function App() {
               <button
                 onClick={handleHotelSearch}
                 disabled={searching || !hotelCity}
-                className="w-full rounded-xl bg-[var(--color-accent)] py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 transition-opacity"
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', background: (searching || !hotelCity) ? 'var(--color-line)' : 'var(--color-accent)', color: (searching || !hotelCity) ? 'var(--color-muted)' : '#fff', fontSize: '0.875rem', fontWeight: 600, border: 'none', cursor: (searching || !hotelCity) ? 'default' : 'pointer' }}
               >
                 {searching ? 'Searching...' : 'Search Hotels'}
               </button>
@@ -450,31 +471,28 @@ export default function App() {
             )}
 
             {hotelResults.length > 0 && !searching && (
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <p className="text-sm text-[var(--color-muted)]">{hotelResults.length} hotels found</p>
+              <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-muted)' }}>{hotelResults.length} hotels found</p>
                   {user && (
-                    <button onClick={() => saveCurrent('hotel')} className="text-xs text-[var(--color-accent)] font-medium hover:underline">
+                    <button onClick={() => saveCurrent('hotel')} style={{ background: 'none', border: 'none', color: 'var(--color-accent)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500 }}>
                       Save search
                     </button>
                   )}
                 </div>
                 {hotelResults.map(h => (
-                  <div key={h.id} className="rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold text-[var(--color-ink)]">{h.name}</p>
-                        <p className="text-xs text-[var(--color-muted)]">{h.location}</p>
-                        <p className="text-xs text-[var(--color-muted)]">{'★'.repeat(h.stars)} · {h.rating}/10</p>
+                  <div key={h.id} style={{ border: '1px solid var(--color-line)', borderRadius: '0.75rem', background: 'var(--color-panel)', padding: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-ink)' }}>{h.name}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginTop: '0.125rem' }}>{h.location}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>{'★'.repeat(h.stars)} · {h.rating}/10</p>
                       </div>
-                      <div className="text-right shrink-0 ml-4 space-y-1">
-                        <p className="text-xl font-bold text-[var(--color-ink)]">${h.pricePerNight}</p>
-                        <p className="text-[0.6rem] text-[var(--color-muted)]">per night</p>
-                        <a
-                          href={h.bookUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-block rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+                      <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '1rem' }}>
+                        <p style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-ink)' }}>${h.pricePerNight}</p>
+                        <p style={{ fontSize: '0.6rem', color: 'var(--color-muted)' }}>per night</p>
+                        <a href={h.bookUrl} target="_blank" rel="noopener noreferrer"
+                          style={{ display: 'inline-block', marginTop: '0.375rem', padding: '0.375rem 0.75rem', borderRadius: '0.5rem', background: 'var(--color-accent)', fontSize: '0.75rem', fontWeight: 600, color: '#fff', textDecoration: 'none' }}
                         >
                           Book
                         </a>
@@ -489,32 +507,36 @@ export default function App() {
 
         {/* ── Saved Tab ── */}
         {tab === 'saved' && (
-          <div className="space-y-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {!user && (
-              <div className="text-center py-12 text-sm text-[var(--color-muted)]">
-                Sign in to save your searches.
-              </div>
+              <p style={{ textAlign: 'center', padding: '3rem 0', fontSize: '0.875rem', color: 'var(--color-muted)' }}>
+                Sign in to save flights and searches.
+              </p>
             )}
             {user && savedLoading && (
-              <div className="text-center py-8"><Spinner /></div>
+              <div style={{ textAlign: 'center', padding: '2rem 0' }}><Spinner /></div>
             )}
             {user && !savedLoading && saved.length === 0 && (
-              <div className="text-center py-12 text-sm text-[var(--color-muted)]">
-                No saved searches yet. Search for flights or hotels and save them here.
-              </div>
+              <p style={{ textAlign: 'center', padding: '3rem 0', fontSize: '0.875rem', color: 'var(--color-muted)' }}>
+                No saved items yet. Search for flights or hotels and save them here.
+              </p>
             )}
             {user && !savedLoading && saved.map(s => (
-              <div key={s.id} className="rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-4 flex justify-between items-center">
+              <div key={s.id} style={{ border: '1px solid var(--color-line)', borderRadius: '0.75rem', background: 'var(--color-panel)', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <span className={`text-[0.65rem] font-bold uppercase tracking-wider ${s.type === 'flight' ? 'text-[var(--color-accent)]' : 'text-[var(--color-ink)]'}`}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: s.type === 'flight' ? 'var(--color-accent)' : 'var(--color-ink)' }}>
                     {s.type}
                   </span>
-                  <p className="text-sm text-[var(--color-ink)] mt-0.5">{s.label}</p>
-                  <p className="text-[0.65rem] text-[var(--color-muted)]">{new Date(s.savedAt).toLocaleDateString()}</p>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-ink)', marginTop: '0.125rem' }}>{s.label}</p>
+                  <p style={{ fontSize: '0.65rem', color: 'var(--color-muted)' }}>{new Date(s.savedAt).toLocaleDateString()}</p>
                 </div>
-                <div className="flex gap-2 shrink-0 ml-4">
-                  <button onClick={() => restoreSearch(s)} className="text-xs text-[var(--color-accent)] font-medium hover:underline">Search</button>
-                  <button onClick={() => deleteSaved(s.id)} className="text-xs text-[var(--color-muted)] hover:text-red-500">Remove</button>
+                <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, marginLeft: '1rem' }}>
+                  {s.params.bookUrl && (
+                    <a href={s.params.bookUrl} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: '0.75rem', color: 'var(--color-accent)', fontWeight: 500, textDecoration: 'none' }}>Book</a>
+                  )}
+                  <button onClick={() => restoreSearch(s)} style={{ background: 'none', border: 'none', fontSize: '0.75rem', color: 'var(--color-accent)', fontWeight: 500, cursor: 'pointer' }}>Search</button>
+                  <button onClick={() => deleteSaved(s.id)} style={{ background: 'none', border: 'none', fontSize: '0.75rem', color: 'var(--color-muted)', cursor: 'pointer' }}>Remove</button>
                 </div>
               </div>
             ))}
@@ -523,24 +545,24 @@ export default function App() {
 
         {/* ── Profile Tab ── */}
         {tab === 'profile' && user && (
-          <div className="space-y-4">
-            <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-6 text-center">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ border: '1px solid var(--color-line)', borderRadius: '0.75rem', background: 'var(--color-panel)', padding: '1.5rem', textAlign: 'center' }}>
               {user.avatarUrl && (
-                <img src={user.avatarUrl} alt="" className="w-16 h-16 rounded-full mx-auto mb-3" />
+                <img src={user.avatarUrl} alt="" style={{ width: 64, height: 64, borderRadius: '50%', margin: '0 auto 0.75rem' }} />
               )}
-              <p className="text-lg font-semibold text-[var(--color-ink)]">{user.login}</p>
-              <p className="text-xs text-[var(--color-muted)] mt-1">Signed in via GitHub</p>
+              <p style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--color-ink)' }}>{user.login}</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginTop: '0.25rem' }}>Signed in via GitHub</p>
             </div>
-            <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-[var(--color-ink)]">Your Stats</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg bg-[var(--color-line)] p-3 text-center">
-                  <p className="text-2xl font-bold text-[var(--color-ink)]">{saved.length}</p>
-                  <p className="text-xs text-[var(--color-muted)]">Saved searches</p>
+            <div style={{ border: '1px solid var(--color-line)', borderRadius: '0.75rem', background: 'var(--color-panel)', padding: '1rem' }}>
+              <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-ink)', marginBottom: '0.75rem' }}>Your Stats</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div style={{ borderRadius: '0.5rem', background: 'var(--color-line)', padding: '0.75rem', textAlign: 'center' }}>
+                  <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-ink)' }}>{saved.length}</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>Saved items</p>
                 </div>
-                <div className="rounded-lg bg-[var(--color-line)] p-3 text-center">
-                  <p className="text-2xl font-bold text-[var(--color-ink)]">{flightResults.length + hotelResults.length}</p>
-                  <p className="text-xs text-[var(--color-muted)]">Results found</p>
+                <div style={{ borderRadius: '0.5rem', background: 'var(--color-line)', padding: '0.75rem', textAlign: 'center' }}>
+                  <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-ink)' }}>{flightResults.length + hotelResults.length}</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>Results found</p>
                 </div>
               </div>
             </div>
@@ -548,7 +570,7 @@ export default function App() {
         )}
 
         {/* Footer */}
-        <p className="text-center text-xs text-[var(--color-muted)] mt-8 pt-4 border-t border-[var(--color-line)]">
+        <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--color-muted)', marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--color-line)' }}>
           100% free. No commissions, no hidden fees. Links go directly to airlines and hotels.
         </p>
       </div>
