@@ -35,7 +35,7 @@ const S = {
   card: { border: '1px solid var(--color-line)', borderRadius: 12, background: 'var(--color-panel)', padding: '1.25rem' } as React.CSSProperties,
   label: { fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-muted)', marginBottom: 4 } as React.CSSProperties,
   input: { width: '100%', padding: '0.625rem 0.75rem', border: '1px solid var(--color-line)', borderRadius: 8, background: 'var(--color-paper)', color: 'var(--color-ink)', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' as const } as React.CSSProperties,
-  btn: (active: boolean) => ({ width: '100%', padding: '0.8rem', borderRadius: 12, background: 'var(--color-accent)', color: '#fff', fontSize: '0.875rem', fontWeight: 600, border: 'none', cursor: active ? 'pointer' : 'default', opacity: active ? 1 : 0.5 }) as React.CSSProperties,
+  btn: (active: boolean) => ({ width: '100%', padding: '0.8rem', borderRadius: 12, background: active ? 'var(--color-accent)' : 'var(--color-muted)', color: '#fff', fontSize: '0.875rem', fontWeight: 600, border: 'none', cursor: active ? 'pointer' : 'default' }) as React.CSSProperties,
   link: { background: 'none', border: 'none', color: 'var(--color-accent)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500, padding: 0 } as React.CSSProperties,
   muted: { background: 'none', border: 'none', color: 'var(--color-muted)', cursor: 'pointer', fontSize: '0.75rem', padding: 0 } as React.CSSProperties,
   pill: { display: 'inline-block', padding: '0.35rem 0.75rem', borderRadius: 8, background: 'var(--color-accent)', fontSize: '0.75rem', fontWeight: 600, color: '#fff', textDecoration: 'none' } as React.CSSProperties,
@@ -246,7 +246,7 @@ export default function App() {
             Find Cheap Flights & Hotels
           </h1>
           <p style={{ marginTop: 6, fontSize: '0.875rem', color: 'var(--color-muted)' }}>
-            Real prices from 400+ airlines. Compare, save, and book.
+            Real prices from 400+ airlines. Compare side-by-side, save deals, book direct.
           </p>
         </div>
 
@@ -271,10 +271,10 @@ export default function App() {
                   <PlaceInput label="From" placeholder="City or airport..." value={fOrigin} onChange={setFOrigin} />
                   <PlaceInput label="To" placeholder="City or airport..." value={fDest} onChange={setFDest} />
                 </div>
-                <div style={S.grid3}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: '0.75rem' }}>
                   <Field label="Depart"><input type="date" value={fDepart} onChange={e => setFDepart(e.target.value)} style={S.input} /></Field>
                   <Field label="Return"><input type="date" value={fReturn} onChange={e => setFReturn(e.target.value)} style={S.input} /></Field>
-                  <Field label="Travelers"><input type="number" min={1} max={9} value={fTravelers} onChange={e => setFTravelers(Math.max(1, +e.target.value))} style={S.input} /></Field>
+                  <Field label="Pax"><input type="number" min={1} max={9} value={fTravelers} onChange={e => setFTravelers(Math.max(1, +e.target.value))} style={S.input} /></Field>
                 </div>
                 <button onClick={searchFlights} disabled={searching || !fOrigin || !fDest} style={S.btn(!searching && !!fOrigin && !!fDest)}>
                   {searching ? 'Searching...' : 'Search Flights'}
@@ -335,7 +335,7 @@ export default function App() {
             <div style={S.card}>
               <div style={{ ...S.stack, gap: '0.75rem' }}>
                 <PlaceInput label="Destination" placeholder="City..." value={hCity} onChange={setHCity} />
-                <div style={S.grid3}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: '0.75rem' }}>
                   <Field label="Check-in"><input type="date" value={hIn} onChange={e => setHIn(e.target.value)} style={S.input} /></Field>
                   <Field label="Check-out"><input type="date" value={hOut} onChange={e => setHOut(e.target.value)} style={S.input} /></Field>
                   <Field label="Guests"><input type="number" min={1} max={9} value={hGuests} onChange={e => setHGuests(Math.max(1, +e.target.value))} style={S.input} /></Field>
@@ -466,7 +466,7 @@ export default function App() {
 
         {/* Footer */}
         <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--color-muted)', marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--color-line)' }}>
-          100% free. No fees. Links go directly to airlines and hotels.
+          Completely free. No tracking, no ads. Links go directly to airlines and hotels.
         </p>
       </div>
     </FasShell>
