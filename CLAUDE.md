@@ -13,9 +13,9 @@ before writing or changing anything.
 
 ## SDK
 
-This app uses `@freeappstore/sdk` (v0.12.0+). Available modules:
+This app uses `@freeappstore/sdk` (v0.14.0+). Available modules:
 
-- `fas.auth` — GitHub OAuth sign-in (SSO across all apps)
+- `fas.auth` — OAuth sign-in (SSO across all apps). **Always offer both GitHub and Google sign-in.**
 - `fas.kv` — per-user storage (1MB, 100 keys)
 - `fas.collections` — Firestore-style document database
 - `fas.counters` — atomic shared counters
@@ -26,9 +26,11 @@ This app uses `@freeappstore/sdk` (v0.12.0+). Available modules:
 - `fas.log` — logging (auto-captures errors, uploads to server)
 - `fas.webhooks` — outbound webhook management
 - `fas.roles` — app-level RBAC
+- `fas.friends` — platform-level friend relationships (shared across all apps)
+- `fas.voice` — speech-to-text via `useVoiceInput` hook
 
 UI components: `import { FasShell, Modal, Card, Tabs, Badge, ... } from '@freeappstore/sdk/ui'`
-Hooks: `import { useAuth, useTheme } from '@freeappstore/sdk/hooks'`
+Hooks: `import { useAuth, useTheme, useFriends, useVoiceInput } from '@freeappstore/sdk/hooks'`
 
 ## Config & secrets
 
