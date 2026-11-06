@@ -1,0 +1,6 @@
+{
+  "appId": "flight-search",
+  "applicationRoot": "web",
+  "outputPath": "web/dist",
+  "buildCommand": "pnpm build"
+}
