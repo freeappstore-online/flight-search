@@ -54,13 +54,13 @@ async function fetchFlights(proxy: typeof fas.proxy, origin: string, dest: strin
 
 type Place = { code: string; name: string; country_name: string; type: string }
 
-function PlaceInput({ label, placeholder, value, onChange, onSwap, showSwap }: {
-  label: string; placeholder?: string; value: string; onChange: (code: string) => void
+function PlaceInput({ label, placeholder, text, onChange, onSwap, showSwap }: {
+  label: string; placeholder?: string; text: string; onChange: (code: string, text: string) => void
   onSwap?: () => void; showSwap?: boolean
 }) {
   const [suggestions, setSuggestions] = useState<Place[]>([])
   const [open, setOpen] = useState(false)
-  const [display, setDisplay] = useState(value)
+  const [display, setDisplay] = useState(text)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const search = useCallback(async (term: string) => {
@@ -73,7 +73,7 @@ function PlaceInput({ label, placeholder, value, onChange, onSwap, showSwap }: {
   }, [])
 
   // Sync display when parent swaps values
-  useEffect(() => { if (value && !display) setDisplay(value) }, [value])
+  useEffect(() => { setDisplay(text) }, [text])
 
   return (
     <div style={{ position: 'relative' }}>
@@ -99,7 +99,7 @@ function PlaceInput({ label, placeholder, value, onChange, onSwap, showSwap }: {
         <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, marginTop: 4, background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.14)', overflow: 'hidden' }}>
           {suggestions.map(p => (
             <button key={p.code + p.type}
-              onMouseDown={() => { setDisplay(`${p.name} (${p.code})`); setSuggestions([]); setOpen(false); onChange(p.code) }}
+              onMouseDown={() => { const t = `${p.name} (${p.code})`; setDisplay(t); setSuggestions([]); setOpen(false); onChange(p.code, t) }}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 12px', border: 'none', background: 'var(--paper)', cursor: 'pointer', fontSize: 14, color: 'var(--ink)', textAlign: 'left' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--line)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'var(--paper)')}
@@ -174,7 +174,7 @@ export default function App() {
   )
   const compared = flights.filter(f => compareIds.has(f.id)).sort((a, b) => a.price - b.price)
 
-  const inputBase: React.CSSProperties = { width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 10, background: 'var(--paper)', color: 'var(--ink)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }
+  const inputBase: React.CSSProperties = { width: '100%', minWidth: 0, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 10, background: 'var(--paper)', color: 'var(--ink)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }
   const labelBase: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 4 }
   const cardBase: React.CSSProperties = { border: '1px solid var(--line)', borderRadius: 14, background: 'var(--panel)', padding: 16 }
 
@@ -196,14 +196,14 @@ export default function App() {
 
           {/* From / To — stacked with swap button */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <PlaceInput label="From" placeholder="City or airport..." value={origin}
-              onChange={c => { setOrigin(c); setOriginDisplay(c) }} showSwap onSwap={swapCities} />
-            <PlaceInput label="To" placeholder="City or airport..." value={dest}
-              onChange={c => { setDest(c); setDestDisplay(c) }} />
+            <PlaceInput label="From" placeholder="City or airport..." text={originDisplay}
+              onChange={(c, t) => { setOrigin(c); setOriginDisplay(t) }} showSwap onSwap={swapCities} />
+            <PlaceInput label="To" placeholder="City or airport..." text={destDisplay}
+              onChange={(c, t) => { setDest(c); setDestDisplay(t) }} />
           </div>
 
           {/* Date / Return / Travelers */}
-          <div style={{ display: 'grid', gridTemplateColumns: tripType === 'round' ? '1fr 1fr 80px' : '1fr 80px', gap: 12, marginTop: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: tripType === 'round' ? 'minmax(0, 1fr) minmax(0, 1fr) 80px' : 'minmax(0, 1fr) 80px', gap: 12, marginTop: 12 }}>
             <div>
               <label style={labelBase}>Depart</label>
               <input type="date" value={depart} onChange={e => setDepart(e.target.value)} style={inputBase} />
