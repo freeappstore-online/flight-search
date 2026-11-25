@@ -21,8 +21,9 @@ interface SavedItem {
 // ── Helpers ──
 
 const rid = () => Math.random().toString(36).slice(2, 10)
-const today = () => new Date().toISOString().slice(0, 10)
-const nextWeek = () => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10) }
+const localISODate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const today = () => localISODate(new Date())
+const nextWeek = () => { const d = new Date(); d.setDate(d.getDate() + 7); return localISODate(d) }
 const fmtTime = (iso: string) => iso?.split('T')[1]?.slice(0, 5) || ''
 const fmtDate = (iso: string) => { const d = new Date(iso); return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) }
 
@@ -203,15 +204,15 @@ export default function App() {
           </div>
 
           {/* Date / Return / Travelers */}
-          <div style={{ display: 'grid', gridTemplateColumns: tripType === 'round' ? 'minmax(0, 1fr) minmax(0, 1fr) 80px' : 'minmax(0, 1fr) 80px', gap: 12, marginTop: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: tripType === 'round' ? 'minmax(0, 1fr) minmax(0, 1fr) 64px' : 'minmax(0, 1fr) 64px', gap: 12, marginTop: 12 }}>
             <div>
               <label style={labelBase}>Depart</label>
-              <input type="date" value={depart} onChange={e => setDepart(e.target.value)} style={inputBase} />
+              <input type="date" value={depart} onChange={e => setDepart(e.target.value)} style={{ ...inputBase, padding: '10px 8px' }} />
             </div>
             {tripType === 'round' && (
               <div>
                 <label style={labelBase}>Return</label>
-                <input type="date" value={ret} onChange={e => setRet(e.target.value)} style={inputBase} />
+                <input type="date" value={ret} onChange={e => setRet(e.target.value)} style={{ ...inputBase, padding: '10px 8px' }} />
               </div>
             )}
             <div>
